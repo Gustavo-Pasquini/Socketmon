@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css'
 import { io } from 'socket.io-client';
+import Menu from './menu';
 
 // Configuração otimizada para baixa latência (UDP-like)
 const socket = io('http://localhost:3001', {
@@ -23,6 +24,11 @@ function App() {
   const [keysPressed, setKeysPressed] = useState<Set<string>>(new Set());
   const lastEmitTime = useRef<number>(0);
   const EMIT_THROTTLE = 16; // ~60 updates por segundo
+
+  // Adicione estado para controlar início e papel
+  const [started, setStarted] = useState(false);
+  const [playerRole, setPlayerRole] = useState<'pokemon' | 'trainer'>('trainer');
+  const [playerName, setPlayerName] = useState('');
 
   const sendMessage = () => {
     // Lógica para enviar a mensagem
@@ -162,6 +168,17 @@ function App() {
 
     return () => clearInterval(interval);
   }, [keysPressed]);
+
+  // Função passada para o Menu
+  const handleStart = (name: string, role: 'pokemon' | 'trainer') => {
+    setPlayerName(name);
+    setPlayerRole(role);
+    setStarted(true);
+  };
+
+  if (!started) {
+    return <Menu onStart={handleStart} />;
+  }
 
   return (
     <>
