@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import socket from './socket';
-import bg from './img/menu-bg.png';
-import logo from './img/Logo Retrô do SocketMon.png';
+import bg from '../public/assets/menu-bg.png';
+import logo from '../public/assets/Logo Retrô do SocketMon.png';
 
 
 type Role = 'pokemon' | 'trainer';
