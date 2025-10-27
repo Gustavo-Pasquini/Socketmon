@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import socket from './socket';
 import bg from './img/menu-bg.png';
 import logo from './img/Logo Retrô do SocketMon.png';
 
@@ -16,6 +17,7 @@ export default function Menu({ onStart }: Props) {
   const start = () => {
     const finalName = (name || (selectedRole === 'trainer' ? 'Treinador' : 'Pokémon')).trim();
     onStart(finalName, selectedRole);
+    socket.emit('select-role', { name: finalName, role: selectedRole });
   };
 
   if (screen === 'play') {

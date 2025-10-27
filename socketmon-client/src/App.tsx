@@ -1,26 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css'
-import { io } from 'socket.io-client';
+import socket from './socket';
 import Menu from './menu';
-
-// Configuração otimizada para baixa latência (UDP-like)
-const socket = io('http://localhost:3001', {
-  transports: ['websocket'], // Força websocket para menor latência
-  upgrade: false,
-  rememberUpgrade: true,
-  reconnection: true,
-  reconnectionDelay: 500,
-  reconnectionDelayMax: 1000,
-  timeout: 10000
-});
-
 
 function App() {
 
   const [message, setMessage] = useState('');
   const [position, setPosition] = useState({ x: 100, y: 100 });
   const [myId, setMyId] = useState('');
-  const [otherPlayers, setOtherPlayers] = useState<Record<string, { x: number; y: number }>>({});
+  const [otherPlayers, setOtherPlayers] = useState<Record<string, { x: number; y: number; role?: string }>>({});
   const [keysPressed, setKeysPressed] = useState<Set<string>>(new Set());
   const lastEmitTime = useRef<number>(0);
   const EMIT_THROTTLE = 16; // ~60 updates por segundo
@@ -29,6 +17,9 @@ function App() {
   const [started, setStarted] = useState(false);
   const [playerRole, setPlayerRole] = useState<'pokemon' | 'trainer'>('trainer');
   const [playerName, setPlayerName] = useState('');
+  const [gameStatus, setGameStatus] = useState<'menu' | 'waiting' | 'playing'>('menu');
+  const [opponentName, setOpponentName] = useState('');
+  const [opponentId, setOpponentId] = useState('');
 
   const sendMessage = () => {
     // Lógica para enviar a mensagem
@@ -44,18 +35,25 @@ function App() {
     });
 
     // Receber todos os jogadores já conectados ao entrar
-    socket.on('all-players', (players: Record<string, { x: number; y: number }>) => {
+    socket.on('all-players', (players: Record<string, { position: { x: number; y: number }; role?: string }>) => {
       console.log('Todos os jogadores:', players);
-      // O servidor já filtra o próprio jogador, então só precisamos atualizar o estado
-      setOtherPlayers(players);
+      const formattedPlayers: Record<string, { x: number; y: number; role?: string }> = {};
+      for (const id in players) {
+        formattedPlayers[id] = {
+          x: players[id].position.x,
+          y: players[id].position.y,
+          role: players[id].role
+        };
+      }
+      setOtherPlayers(formattedPlayers);
     });
 
     // Receber notificação de novo jogador conectado
-    socket.on('new-player', (data: { id: string; position: { x: number; y: number } }) => {
+    socket.on('new-player', (data: { id: string; position: { x: number; y: number }; role?: string }) => {
       console.log('Novo jogador conectado:', data);
       setOtherPlayers(prev => ({
         ...prev,
-        [data.id]: data.position
+        [data.id]: { x: data.position.x, y: data.position.y, role: data.role }
       }));
     });
 
@@ -64,7 +62,16 @@ function App() {
       console.log('Movimento recebido:', data);
       setOtherPlayers(prev => ({
         ...prev,
-        [data.id]: data.position
+        [data.id]: { ...prev[data.id], x: data.position.x, y: data.position.y }
+      }));
+    });
+
+    // Receber atualização de role de outros jogadores
+    socket.on('player-role-update', (data: { id: string; role: string }) => {
+      console.log('Role atualizada:', data);
+      setOtherPlayers(prev => ({
+        ...prev,
+        [data.id]: { ...prev[data.id], role: data.role }
       }));
     });
 
@@ -78,12 +85,32 @@ function App() {
       });
     });
 
+    // Quando o jogo começa
+    socket.on('game-started', (data: { role: string; opponent: string; opponentId: string; gameId: number }) => {
+      console.log('Jogo iniciado!', data);
+      setOpponentName(data.opponent);
+      setOpponentId(data.opponentId);
+      setGameStatus('playing');
+    });
+
+    // Quando o jogo termina
+    socket.on('game-ended', (data: { reason: string }) => {
+      console.log('Jogo encerrado:', data);
+      alert(`O jogo terminou: ${data.reason === 'opponent-disconnected' ? 'Oponente desconectou' : data.reason}`);
+      setGameStatus('waiting');
+      setOpponentName('');
+      setOpponentId('');
+    });
+
     return () => {
       socket.off('your-id');
       socket.off('all-players');
       socket.off('new-player');
       socket.off('player-move');
       socket.off('player-disconnected');
+      socket.off('player-role-update');
+      socket.off('game-started');
+      socket.off('game-ended');
     };
   }, []);
 
@@ -174,10 +201,87 @@ function App() {
     setPlayerName(name);
     setPlayerRole(role);
     setStarted(true);
+    setGameStatus('waiting');
   };
 
   if (!started) {
     return <Menu onStart={handleStart} />;
+  }
+
+  // Tela de aguardando oponente
+  if (gameStatus === 'waiting') {
+    return (
+      <div style={{
+        display: 'flex',
+        height: '100vh',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: 20,
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: '#fff'
+      }}>
+        <div style={{
+          fontSize: 48,
+          fontWeight: 'bold',
+          marginBottom: 20
+        }}>
+          Aguardando Oponente...
+        </div>
+
+        <div style={{
+          fontSize: 20,
+          background: 'rgba(255, 255, 255, 0.1)',
+          padding: '20px 40px',
+          borderRadius: 10,
+          backdropFilter: 'blur(10px)'
+        }}>
+          <div>Jogador: <strong>{playerName}</strong></div>
+          <div>Papel: <strong>{playerRole === 'trainer' ? 'Treinador' : 'Pokémon'}</strong></div>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          gap: 8,
+          marginTop: 20
+        }}>
+          <div className="loading-dot" style={{
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            background: 'white',
+            animation: 'bounce 1.4s infinite ease-in-out both',
+            animationDelay: '0s'
+          }}></div>
+          <div className="loading-dot" style={{
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            background: 'white',
+            animation: 'bounce 1.4s infinite ease-in-out both',
+            animationDelay: '0.16s'
+          }}></div>
+          <div className="loading-dot" style={{
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            background: 'white',
+            animation: 'bounce 1.4s infinite ease-in-out both',
+            animationDelay: '0.32s'
+          }}></div>
+        </div>
+
+        <style>{`
+          @keyframes bounce {
+            0%, 80%, 100% {
+              transform: scale(0);
+            } 40% {
+              transform: scale(1.0);
+            }
+          }
+        `}</style>
+      </div>
+    );
   }
 
   return (
@@ -201,27 +305,33 @@ function App() {
         Você
       </div>
 
-      {/* Outros jogadores */}
-      {Object.entries(otherPlayers).map(([id, pos]) => (
-        <div key={id} style={{
-          position: 'absolute',
-          top: `${pos.y}px`,
-          left: `${pos.x}px`,
-          width: '50px',
-          height: '50px',
-          backgroundColor: '#e74c3c',
-          borderRadius: '5px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontWeight: 'bold',
-          fontSize: '10px',
-          transition: 'all 0.05s linear' // Transição rápida para outros jogadores
-        }}>
-          {id.slice(0, 4)}
-        </div>
-      ))}
+      {/* Outros jogadores - mostrar apenas oponente se for pokemon */}
+      {Object.entries(otherPlayers).map(([id, player]) => {
+        // Só renderiza se for o oponente e se ele for pokemon
+        if (id === opponentId && player.role === 'pokemon') {
+          return (
+            <div key={id} style={{
+              position: 'absolute',
+              top: `${player.y}px`,
+              left: `${player.x}px`,
+              width: '50px',
+              height: '50px',
+              backgroundColor: '#e74c3c',
+              borderRadius: '5px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: '10px',
+              transition: 'all 0.05s linear'
+            }}>
+              {opponentName.slice(0, 4)}
+            </div>
+          );
+        }
+        return null;
+      })}
 
       <div style={{ position: 'absolute', bottom: '20px', left: '20px' }}>
         <input placeholder='Mensagem...' value={message} onChange={(e) => setMessage(e.target.value)} />
@@ -229,6 +339,15 @@ function App() {
       </div>
 
       <div style={{ position: 'absolute', top: '10px', left: '10px', color: 'white', background: 'rgba(0,0,0,0.7)', padding: '10px', borderRadius: '5px' }}>
+        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '5px' }}>
+          {playerName} ({playerRole === 'trainer' ? 'Treinador' : 'Pokémon'})
+        </div>
+        {opponentName && (
+          <div style={{ marginBottom: '5px', color: '#ffeb3b' }}>
+            Oponente: {opponentName}
+          </div>
+        )}
+        <div style={{ margin: '8px 0', borderTop: '1px solid rgba(255,255,255,0.3)' }}></div>
         Use WASD ou Setas para mover
         <br />
         Posição: X:{position.x} Y:{position.y}
