@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import bg from './img/menu-bg.png';
-import logo from './img/Logo Retrô do SocketMon.png'; // adicionei import do logo
+import logo from './img/Logo Retrô do SocketMon.png';
+
 
 type Role = 'pokemon' | 'trainer';
 type Props = {
@@ -59,35 +60,90 @@ export default function Menu({ onStart }: Props) {
 
   if (screen === 'credits') {
     return (
-      <div style={{
-        position: 'fixed',    // ocupa a viewport inteira
-        inset: 0,             // top:0; right:0; bottom:0; left:0;
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        gap: 16,
-        color: '#fff',
-        backgroundImage: `url(${bg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        overflow: 'hidden',   // remove scroll
-      }}>
-      
-        <h1>Créditos</h1>
-        <div style={{ maxWidth: 600, textAlign: 'center' }}>
-          <p>Desenvolvedores:</p>
-          <p>Gustavo M. Pasquini</p>
-          <p>Henrique K. Ikeda</p>
-          <p style={{ marginTop: 16, fontSize: 14 }}>Trabalho avaliativo da matéria de Sistemas Operacionais</p>
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          gap: 16,
+          color: '#fff',
+          overflow: 'hidden',
+          backgroundImage: `url(${bg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        <div
+          style={{
+            background: 'rgba(0,0,0,0.45)',
+            padding: 40,
+            borderRadius: 8,
+            textAlign: 'center',
+            transform: 'translateY(-180px)',
+            fontFamily: "'Press Start 2P', monospace, 'Courier New'",
+            imageRendering: 'pixelated',
+            color: '#fff',
+            maxWidth: 720,
+            width: '90%'
+          }}
+        >
+          <h2 style={{ margin: 0, fontSize: 14 }}>Créditos</h2>
+
+          <p style={{ maxWidth: 600, margin: '12px auto 0', textAlign: 'center', fontSize: 12, lineHeight: 1.4 }}>
+            Desenvolvido por: Seu Nome Aqui
+            <br />
+            Música/Assets: (lista de fontes)
+            <br />
+            Agradecimentos: (coloque nomes)
+          </p>
+
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
+            <button
+              onClick={() => setScreen('main')}
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                const t = e.currentTarget;
+                t.style.transform = 'translateY(-4px)';
+                t.style.boxShadow = '0 10px 0 #8d6e00';
+                t.style.filter = 'brightness(1.03)';
+              }}
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                const t = e.currentTarget;
+                t.style.transform = 'translateY(0)';
+                t.style.boxShadow = '0 6px 0 #8d6e00';
+                t.style.filter = 'none';
+              }}
+              style={{
+                background: 'linear-gradient(#ffd54f, #ffb300)',
+                color: '#2b2b2b',
+                border: '4px solid #2b2b2b',
+                padding: '10px 18px',
+                fontSize: 14,
+                cursor: 'pointer',
+                transition: 'transform .08s ease, box-shadow .08s ease, filter .08s',
+                boxShadow: '0 6px 0 #8d6e00',
+                borderRadius: 4,
+                fontFamily: 'inherit',
+                userSelect: 'none'
+              }}
+            >
+              Voltar
+            </button>
+          </div>
         </div>
-        <button onClick={() => setScreen('main')} style={{ marginTop: 20, padding: '8px 12px' }}>
-          Voltar
-        </button>
       </div>
     );
   }
+
+
+
+
+
+
+
 
   // main screen
   return (
