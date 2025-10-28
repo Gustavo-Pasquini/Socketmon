@@ -58,6 +58,11 @@ export default function Menu({ onStart }: Props) {
     );
   }
 
+
+
+
+
+  
   if (screen === 'credits') {
     return (
       <div
@@ -174,7 +179,7 @@ export default function Menu({ onStart }: Props) {
           height: 'auto',
           display: 'block',
           margin: '0 auto',
-          transform: 'translateY(-200px)', // negative => sobe; ajuste o valor conforme necessário
+          transform: 'translateY(-150px)', // negative => sobe; ajuste o valor conforme necessário
         }}
       />
       <div
