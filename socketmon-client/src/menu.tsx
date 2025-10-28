@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import bg from './img/menu-bg.png';
-import logo from './img/Logo Retrô do SocketMon.png';
+import { useState } from 'react';
+import socket from './socket';
+import bg from '../public/assets/menu-bg.png';
+import logo from '../public/assets/Logo Retrô do SocketMon.png';
 
 
 type Role = 'pokemon' | 'trainer';
@@ -16,6 +17,7 @@ export default function Menu({ onStart }: Props) {
   const start = () => {
     const finalName = (name || (selectedRole === 'trainer' ? 'Treinador' : 'Pokémon')).trim();
     onStart(finalName, selectedRole);
+    socket.emit('select-role', { name: finalName, role: selectedRole });
   };
 
   if (screen === 'play') {
