@@ -22,41 +22,211 @@ export default function Menu({ onStart }: Props) {
     socket.emit('select-role', { name: finalName, role: selectedRole });
   };
 
+
+  
   if (screen === 'play') {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, background: '#f8f8f8' }}>
-        <h1>Escolha seu papel</h1>
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => setSelectedRole('trainer')}
-            style={{ padding: 10, background: selectedRole === 'trainer' ? '#2ecc71' : '#ddd' }}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+          backgroundImage: `url(${bg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          padding: 20,
+          boxSizing: 'border-box'
+        }}
+      >
+        <div
+          style={{
+            background: 'rgba(0,0,0,0.45)',
+            padding: '28px',
+            borderRadius: 10,
+            textAlign: 'center',
+            fontFamily: "'Press Start 2P', monospace, 'Courier New'",
+            color: '#fff',
+            boxSizing: 'border-box',
+            minWidth: 360,
+            maxWidth: 'min(92%, 720px)'
+          }}
+        >
+          <h1
+            style={{
+              margin: '0 0 16px',
+              fontSize: 'clamp(22px, 4.5vw, 40px)',
+              color: '#ffb300',
+              fontWeight: 700,
+              letterSpacing: '0.4px',
+              textShadow: '1px 1px 0 rgba(0,0,0,0.6)'
+            }}
           >
-            Treinador
-          </button>
+            Escolha seu papel
+          </h1>
 
-          <button
-            onClick={() => setSelectedRole('pokemon')}
-            style={{ padding: 10, background: selectedRole === 'pokemon' ? '#f39c12' : '#ddd' }}
-          >
-            Pokémon
-          </button>
-        </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12 }}>
+            <button
+              onClick={() => setSelectedRole('trainer')}
+              style={{
+                padding: 10,
+                minWidth: 120,
+                background: selectedRole === 'trainer' ? 'linear-gradient(#ffd54f, #ffb300)' : 'rgba(255,255,255,0.08)',
+                color: selectedRole === 'trainer' ? '#2b2b2b' : '#fff',
+                border: selectedRole === 'trainer' ? '4px solid #2b2b2b' : '2px solid rgba(255,255,255,0.06)',
+                boxShadow: selectedRole === 'trainer' ? '0 6px 0 #8d6e00' : 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontFamily: 'inherit'
+              }}
+            >
+              Treinador
+            </button>
 
-        <input
-          placeholder="Digite seu nome"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ padding: 8, fontSize: 16, marginTop: 12 }}
-        />
+            <button
+              onClick={() => setSelectedRole('pokemon')}
+              style={{
+                padding: 10,
+                minWidth: 120,
+                background: selectedRole === 'pokemon' ? 'linear-gradient(#90caf9, #42a5f5)' : 'rgba(255,255,255,0.08)',
+                color: selectedRole === 'pokemon' ? '#042034' : '#fff',
+                border: selectedRole === 'pokemon' ? '4px solid #042034' : '2px solid rgba(255,255,255,0.06)',
+                boxShadow: selectedRole === 'pokemon' ? '0 6px 0 #0b4a66' : 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontFamily: 'inherit'
+              }}
+            >
+              Pokémon
+            </button>
+          </div>
 
-        <div style={{ marginTop: 10 }}>
-          <button onClick={start} style={{ marginRight: 8, padding: '8px 12px' }}>
-            Começar
-          </button>
-          <button onClick={() => setScreen('main')} style={{ padding: '8px 12px' }}>
-            Voltar
-          </button>
+          <input
+            placeholder="Digite seu nome"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onFocus={(e) => {
+              const t = e.currentTarget;
+              t.style.boxShadow = '0 12px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.03)';
+              t.style.border = '2px solid rgba(255,255,255,0.32)';
+              t.style.background = 'rgba(255,255,255,0.08)';
+              t.style.transform = 'translateY(-1px)';
+            }}
+            onBlur={(e) => {
+              const t = e.currentTarget;
+              t.style.boxShadow = '0 6px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.01)';
+              t.style.border = '2px solid rgba(255,255,255,0.22)';
+              t.style.background = 'rgba(255,255,255,0.06)';
+              t.style.transform = 'none';
+            }}
+            style={{
+              padding: 14,
+              fontSize: 16,
+              width: '100%',
+              maxWidth: 520,
+              boxSizing: 'border-box',
+              borderRadius: 8,
+              border: '2px solid rgba(255,255,255,0.22)', // mais visível por padrão
+              background: 'rgba(255,255,255,0.06)', // overlay mais forte por padrão
+              color: '#fff',
+              outline: 'none',
+              fontFamily: 'inherit',
+              marginTop: 12,
+              boxShadow: '0 6px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.01)',
+              transition: 'box-shadow .12s ease, border .12s ease, background .12s ease, transform .08s'
+            }}
+          />
+
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 14 }}>
+            <button
+              onClick={start}
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                const t = e.currentTarget;
+                t.style.transform = 'translateY(-4px)';
+                t.style.boxShadow = '0 10px 0 #8d6e00';
+                t.style.filter = 'brightness(1.03)';
+              }}
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                const t = e.currentTarget;
+                t.style.transform = 'translateY(0)';
+                t.style.boxShadow = '0 6px 0 #8d6e00';
+                t.style.filter = 'none';
+              }}
+              onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) => {
+                const t = e.currentTarget;
+                t.style.transform = 'translateY(0)';
+                t.style.boxShadow = '0 3px 0 #8d6e00';
+              }}
+              onMouseUp={(e: React.MouseEvent<HTMLButtonElement>) => {
+                const t = e.currentTarget;
+                t.style.transform = 'translateY(-4px)';
+                t.style.boxShadow = '0 10px 0 #8d6e00';
+              }}
+              style={{
+                background: 'linear-gradient(#ffd54f, #ffb300)',
+                color: '#2b2b2b',
+                border: '4px solid #2b2b2b',
+                padding: '10px 18px',
+                fontSize: 14,
+                cursor: 'pointer',
+                transition: 'transform .08s ease, box-shadow .08s ease, filter .08s',
+                boxShadow: '0 6px 0 #8d6e00',
+                borderRadius: 4,
+                fontFamily: 'inherit',
+                userSelect: 'none'
+              }}
+            >
+              Começar
+            </button>
+
+            <button
+              onClick={() => setScreen('main')}
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                const t = e.currentTarget;
+                t.style.transform = 'translateY(-4px)';
+                // sombra azul para o Voltar (corrigido)
+                t.style.boxShadow = '0 10px 0 #0b4a66';
+                t.style.filter = 'brightness(1.03)';
+              }}
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                const t = e.currentTarget;
+                t.style.transform = 'translateY(0)';
+                // sombra azul (corrigido)
+                t.style.boxShadow = '0 6px 0 #0b4a66';
+                t.style.filter = 'none';
+              }}
+              onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) => {
+                const t = e.currentTarget;
+                t.style.transform = 'translateY(0)';
+                // sombra azul (corrigido)
+                t.style.boxShadow = '0 3px 0 #0b4a66';
+              }}
+              onMouseUp={(e: React.MouseEvent<HTMLButtonElement>) => {
+                const t = e.currentTarget;
+                t.style.transform = 'translateY(-4px)';
+                // sombra azul (corrigido)
+                t.style.boxShadow = '0 10px 0 #0b4a66';
+              }}
+              style={{
+                background: 'linear-gradient(#90caf9, #42a5f5)',
+                color: '#042034',
+                border: '4px solid #042034',
+                padding: '10px 18px',
+                fontSize: 14,
+                cursor: 'pointer',
+                transition: 'transform .08s ease, box-shadow .08s ease, filter .08s',
+                boxShadow: '0 6px 0 #0b4a66',
+                borderRadius: 4,
+                fontFamily: 'inherit',
+                userSelect: 'none'
+              }}
+            >
+              Voltar
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -367,24 +537,28 @@ export default function Menu({ onStart }: Props) {
             onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
               const t = e.currentTarget;
               t.style.transform = 'translateY(-4px)';
-              t.style.boxShadow = '0 10px 0 #8d6e00';
+              // sombra azul para o Créditos (corrigido)
+              t.style.boxShadow = '0 10px 0 #0b4a66';
               t.style.filter = 'brightness(1.03)';
             }}
             onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
               const t = e.currentTarget;
               t.style.transform = 'translateY(0)';
-              t.style.boxShadow = '0 6px 0 #8d6e00';
+              // sombra azul (corrigido)
+              t.style.boxShadow = '0 6px 0 #0b4a66';
               t.style.filter = 'none';
             }}
             onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) => {
               const t = e.currentTarget;
               t.style.transform = 'translateY(0)';
-              t.style.boxShadow = '0 3px 0 #8d6e00';
+              // sombra azul (corrigido)
+              t.style.boxShadow = '0 3px 0 #0b4a66';
             }}
             onMouseUp={(e: React.MouseEvent<HTMLButtonElement>) => {
               const t = e.currentTarget;
               t.style.transform = 'translateY(-4px)';
-              t.style.boxShadow = '0 10px 0 #8d6e00';
+              // sombra azul (corrigido)
+              t.style.boxShadow = '0 10px 0 #0b4a66';
             }}
             style={{
               background: 'linear-gradient(#90caf9, #42a5f5)',
