@@ -29,9 +29,6 @@ let conexoes = 0;
 
 let ids = []
 
-// Armazena as posições de todos os jogadores
-let playerPositions = {};
-
 // Armazena as roles dos jogadores
 let playerRoles = {}; // {socketId: 'pokemon' | 'trainer'}
 
@@ -40,7 +37,7 @@ let pokemonPlayer = []; // Array de {id: string, name: string}
 let trainerPlayer = []; // Array de {id: string, name: string}
 
 // Armazena jogos ativos
-let games = []; // Array de {trainer: string, pokemon: string}
+let games = []; // Array de {trainer: string, pokemon: string, pokemonPosition: number, currentTurn: string, disabledGrids: number[], attempts: number, trainerName: string, pokemonName: string}
 
 io.on("connection", (socket) => {
     console.log(`Usuário conectado: ${socket.id}`);
@@ -48,17 +45,13 @@ io.on("connection", (socket) => {
     ids.push(socket.id);
     console.log(`Total de conexões: ${conexoes}`);
 
-    // Inicializa a posição do novo jogador
-    playerPositions[socket.id] = { x: 100, y: 100 };
-
     socket.emit("your-id", socket.id);
 
     // Envia para o novo cliente todos os jogadores já conectados (exceto ele mesmo)
     const otherPlayers = {};
-    for (const id in playerPositions) {
+    for (const id of ids) {
         if (id !== socket.id) {
             otherPlayers[id] = {
-                position: playerPositions[id],
                 role: playerRoles[id] || null
             };
         }
@@ -68,21 +61,153 @@ io.on("connection", (socket) => {
     // Notifica todos os outros clientes sobre o novo jogador
     socket.broadcast.emit('new-player', {
         id: socket.id,
-        position: playerPositions[socket.id],
         role: playerRoles[socket.id] || null
     });
 
-    socket.on("message", (data) => {
-        console.log(`Mensagem recebida: ${data}`);
+    socket.on("chat-message", (data) => {
+        console.log(`Mensagem de chat de ${data.sender}: ${data.text}`);
+
+        // Envia a mensagem para o destinatário específico
+        if (data.to) {
+            io.to(data.to).emit('chat-message', {
+                sender: data.sender,
+                text: data.text
+            });
+        }
     })
 
-    socket.on("player-move", (position) => {
-        // Atualiza a posição do jogador no servidor
-        playerPositions[socket.id] = position;
+    socket.on("pokemon-select-position", (data) => {
+        console.log(`Pokemon ${socket.id} selecionou posição: ${data.gridNumber}`);
 
-        // Remove log para melhor performance
-        // Broadcast sem acknowledgement para menor latência (UDP-like)
-        socket.volatile.broadcast.emit("player-move", { id: socket.id, position })
+        // Encontra o jogo onde este socket é o pokemon
+        const game = games.find(g => g.pokemon === socket.id);
+
+        if (!game) {
+            socket.emit('error', { message: 'Jogo não encontrado' });
+            return;
+        }
+
+        // Verifica se é o turno do pokemon
+        if (game.currentTurn !== 'pokemon') {
+            socket.emit('error', { message: 'Não é o seu turno' });
+            return;
+        }
+
+        // Verifica se a posição já foi desabilitada
+        if (game.disabledGrids.includes(data.gridNumber)) {
+            socket.emit('error', { message: 'Posição já desabilitada' });
+            return;
+        }
+
+        // Armazena a posição do pokemon
+        game.pokemonPosition = data.gridNumber;
+        game.currentTurn = 'trainer'; // Passa o turno para o trainer
+
+        console.log(`Pokemon escondeu-se na posição ${data.gridNumber}. Turno do Trainer.`);
+
+        // Notifica ambos os jogadores
+        io.to(game.pokemon).emit('position-selected', { success: true });
+        io.to(game.trainer).emit('your-turn', {
+            message: 'Sua vez de adivinhar!',
+            disabledGrids: game.disabledGrids,
+            attempts: game.attempts
+        });
+        io.to(game.pokemon).emit('wait-turn', { message: 'Aguarde o treinador adivinhar' });
+    });
+
+    socket.on("trainer-guess", (data) => {
+        console.log(`Trainer ${socket.id} adivinhou posição: ${data.gridNumber}`);
+
+        // Encontra o jogo onde este socket é o trainer
+        const game = games.find(g => g.trainer === socket.id);
+
+        if (!game) {
+            socket.emit('error', { message: 'Jogo não encontrado' });
+            return;
+        }
+
+        // Verifica se é o turno do trainer
+        if (game.currentTurn !== 'trainer') {
+            socket.emit('error', { message: 'Não é o seu turno' });
+            return;
+        }
+
+        // Verifica se a posição já foi desabilitada
+        if (game.disabledGrids.includes(data.gridNumber)) {
+            socket.emit('error', { message: 'Posição já foi tentada' });
+            return;
+        }
+
+        // Incrementa tentativas
+        game.attempts++;
+
+        // Verifica se acertou
+        if (data.gridNumber === game.pokemonPosition) {
+            console.log(`Trainer acertou! Posição: ${data.gridNumber}. Tentativas: ${game.attempts}`);
+
+            // Notifica ambos os jogadores sobre a vitória
+            io.to(game.trainer).emit('game-over', {
+                result: 'win',
+                attempts: game.attempts,
+                position: game.pokemonPosition,
+                message: `Você venceu! Encontrou o Pokémon em ${game.attempts} tentativa(s)!`
+            });
+            io.to(game.pokemon).emit('game-over', {
+                result: 'lose',
+                attempts: game.attempts,
+                position: game.pokemonPosition,
+                message: `O treinador encontrou você em ${game.attempts} tentativa(s)!`
+            });
+
+            // Remove o jogo
+            const gameIndex = games.findIndex(g => g.trainer === socket.id);
+            games.splice(gameIndex, 1);
+            return;
+        }
+
+        // Se errou, desabilita a posição
+        game.disabledGrids.push(data.gridNumber);
+        console.log(`Trainer errou. Posição ${data.gridNumber} desabilitada. Tentativas: ${game.attempts}`);
+
+        // Verifica se só sobrou uma posição (vitória do Pokemon por fuga)
+        if (game.disabledGrids.length >= 7) {
+            console.log(`Apenas uma posição restante. Pokemon conseguiu fugir!`);
+
+            io.to(game.pokemon).emit('game-over', {
+                result: 'win',
+                attempts: game.attempts,
+                position: game.pokemonPosition,
+                message: `Você venceu! Conseguiu fugir do treinador!`
+            });
+            io.to(game.trainer).emit('game-over', {
+                result: 'lose',
+                attempts: game.attempts,
+                position: game.pokemonPosition,
+                message: `O Pokémon conseguiu fugir! Você errou ${game.attempts} vez(es).`
+            });
+
+            // Remove o jogo
+            const gameIndex = games.findIndex(g => g.trainer === socket.id);
+            games.splice(gameIndex, 1);
+            return;
+        }
+
+        // Passa o turno de volta para o pokemon
+        game.currentTurn = 'pokemon';
+        game.pokemonPosition = null; // Pokemon precisa escolher nova posição
+
+        // Notifica ambos os jogadores
+        io.to(game.trainer).emit('wrong-guess', {
+            guessedPosition: data.gridNumber,
+            disabledGrids: game.disabledGrids,
+            attempts: game.attempts,
+            message: 'Errou! Aguarde o Pokémon escolher nova posição.'
+        });
+        io.to(game.pokemon).emit('your-turn', {
+            message: 'Escolha uma nova posição!',
+            disabledGrids: game.disabledGrids,
+            attempts: game.attempts
+        });
     })
 
     socket.on("select-role", (data) => {
@@ -115,15 +240,38 @@ io.on("connection", (socket) => {
             const trainer = trainerPlayer.shift();
 
             // Cria um novo jogo
-            const newGame = { trainer: trainer.id, pokemon: pokemon.id };
+            const newGame = {
+                trainer: trainer.id,
+                pokemon: pokemon.id,
+                pokemonPosition: null,
+                currentTurn: 'pokemon', // Pokemon começa escolhendo onde se esconder
+                disabledGrids: [],
+                attempts: 0,
+                trainerName: trainer.name,
+                pokemonName: pokemon.name
+            };
             games.push(newGame);
 
             console.log(`Novo jogo criado! Trainer: ${trainer.name} (${trainer.id}) vs Pokemon: ${pokemon.name} (${pokemon.id})`);
             console.log(`Total de jogos ativos: ${games.length}`);
 
             // Notifica os jogadores que o jogo foi criado
-            io.to(trainer.id).emit('game-started', { role: 'trainer', opponent: pokemon.name, opponentId: pokemon.id, gameId: games.length - 1 });
-            io.to(pokemon.id).emit('game-started', { role: 'pokemon', opponent: trainer.name, opponentId: trainer.id, gameId: games.length - 1 });
+            io.to(trainer.id).emit('game-started', {
+                role: 'trainer',
+                opponent: pokemon.name,
+                opponentId: pokemon.id,
+                gameId: games.length - 1,
+                currentTurn: 'pokemon',
+                message: 'Aguarde o Pokémon escolher uma posição...'
+            });
+            io.to(pokemon.id).emit('game-started', {
+                role: 'pokemon',
+                opponent: trainer.name,
+                opponentId: trainer.id,
+                gameId: games.length - 1,
+                currentTurn: 'pokemon',
+                message: 'Escolha onde você quer se esconder!'
+            });
         }
     });
 
@@ -131,8 +279,7 @@ io.on("connection", (socket) => {
         conexoes--;
         ids = ids.filter(id => id !== socket.id);
 
-        // Remove a posição do jogador desconectado
-        delete playerPositions[socket.id];
+        // Remove a role do jogador desconectado
         delete playerRoles[socket.id];
 
         // Remove o jogador das listas de espera
