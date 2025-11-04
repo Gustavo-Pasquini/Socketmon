@@ -218,6 +218,22 @@ function App() {
     setGameStatus('waiting');
   };
 
+  // Função para jogar novamente: reseta variáveis do jogo e volta para estado de waiting/loading
+  const handlePlayAgain = () => {
+    // Resetar estados do jogo
+    setGameOver(false);
+    setGameResult(null);
+    setAttempts(0);
+    setDisabledGrids([]);
+    setGameMessage('Procurando oponente...');
+
+    // Define status para waiting (mostra a tela de loading)
+    setGameStatus('waiting');
+
+    // Emite novamente o papel/nome para o servidor para buscar um novo oponente
+    socket.emit('select-role', { name: playerName, role: playerRole });
+  };
+
   if (!started) {
     return <Menu onStart={handleStart} />;
   }
@@ -333,24 +349,49 @@ function App() {
           </div>
         </div>
 
-        <button
-          onClick={() => {
-            window.location.reload();
-          }}
-          style={{
-            padding: '15px 30px',
-            fontSize: 20,
-            borderRadius: 8,
-            border: 'none',
-            background: 'white',
-            color: '#333',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            marginTop: 20
-          }}
-        >
-          Sair
-        </button>
+        <div style={{
+          display: 'flex',
+          gap: 20,
+          marginTop: 30,
+          justifyContent: 'center'
+        }}>
+          <button
+            onClick={() => {
+              window.location.reload();
+            }}
+            style={{
+              padding: '15px 30px',
+              fontSize: 20,
+              borderRadius: 8,
+              border: 'none',
+              background: 'white',
+              color: '#333',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              marginTop: 20
+            }}
+            >
+            Sair
+          </button>
+          <button
+            onClick={handlePlayAgain}
+            style={{
+              padding: '15px 30px',
+              fontSize: 20,
+              borderRadius: 8,
+              border: 'none',
+              background: 'white',
+              color: '#333',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              marginTop: 20
+            }}
+            >
+            Jogar Novamente
+          </button>        
+        </div>
+
+
       </div>
     );
   }
