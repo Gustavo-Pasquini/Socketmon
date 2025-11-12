@@ -55,3 +55,29 @@ html, body {
 .read-the-docs {
   color: #888;
 }
+
+/* changed code: estilos da tela de "waiting" para usar a mesma tipografia do menu */
+.menu-title {
+  /* ajuste a font-family para a mesma usada no Menu (ex.: Poppins, Inter, etc.) */
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  font-size: 48px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ffeb3b; /* changed: agora amarelo igual ao menu */
+  text-align: center;
+  margin: 0;
+}
+
+.menu-info {
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 20px 40px;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  text-align: center;
+  color: #ffeb3b; /* changed: texto em amarelo */
+}
+/* changed code */
