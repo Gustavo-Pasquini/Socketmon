@@ -5,6 +5,8 @@ import Menu from './menu';
 
 function App() {
   const [message, setMessage] = useState('');
+  const [myId, setMyId] = useState('');
+  const [otherPlayers, setOtherPlayers] = useState<Record<string, { role?: string }>>({});
 
   // Adicione estado para controlar início e papel
   const [started, setStarted] = useState(false);
@@ -49,12 +51,33 @@ function App() {
   }
 
   useEffect(() => {
+    console.log(myId, otherPlayers);
+    socket.on('your-id', (id: string) => {
+      setMyId(id);
+    });
 
     socket.on('all-players', (players: Record<string, { role?: string }>) => {
       const formattedPlayers: Record<string, { role?: string }> = {};
       for (const id in players) {
         formattedPlayers[id] = { role: players[id].role };
       }
+      setOtherPlayers(formattedPlayers);
+    });
+
+    socket.on('new-player', (data: { id: string; role?: string }) => {
+      setOtherPlayers(prev => ({ ...prev, [data.id]: { role: data.role } }));
+    });
+
+    socket.on('player-role-update', (data: { id: string; role: string }) => {
+      setOtherPlayers(prev => ({ ...prev, [data.id]: { ...prev[data.id], role: data.role } }));
+    });
+
+    socket.on('player-disconnected', (id: string) => {
+      setOtherPlayers(prev => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
     });
 
     socket.on('game-started', (data: { role: string; opponent: string; opponentId: string; gameId: number; currentTurn: string; message: string }) => {
