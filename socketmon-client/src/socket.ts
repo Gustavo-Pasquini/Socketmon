@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 
 // Configuração otimizada para baixa latência (UDP-like)
-const socket = io('http://localhost:3001', {
+const socket = io('https://socketmon.onrender.com', { // http://localhost:3001
     transports: ['websocket'], // Força websocket para menor latência
     upgrade: false,
     rememberUpgrade: true,
